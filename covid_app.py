@@ -105,15 +105,26 @@ st.markdown("""
 # ── Data loading ──────────────────────────────────────────────────────────────
 @st.cache_data(show_spinner=False)
 def load_data():
-    url = "https://covid.ourworldindata.org/data/owid-covid-data.csv"
+    urls = [
+        "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv",
+        "https://github.com/owid/covid-19-data/raw/master/public/data/owid-covid-data.csv",
+    ]
     cols = ["location", "date", "total_cases", "total_deaths",
             "total_tests", "new_cases", "new_deaths", "population",
             "continent", "total_vaccinations"]
-    df = pd.read_csv(url, usecols=cols, parse_dates=["date"], low_memory=False)
-    df.rename(columns={"total_cases": "cases", "total_deaths": "deaths"}, inplace=True)
-    df = df[~df["location"].str.startswith("OWID_")]   # remove aggregate rows
-    df = df[df["continent"].notna()]                    # only countries
-    return df
+    last_error = None
+    for url in urls:
+        try:
+            df = pd.read_csv(url, usecols=cols, parse_dates=["date"], low_memory=False)
+            df.rename(columns={"total_cases": "cases", "total_deaths": "deaths"}, inplace=True)
+            df = df[~df["location"].str.startswith("OWID_")]
+            df = df[df["continent"].notna()]
+            return df
+        except Exception as e:
+            last_error = e
+            continue
+    st.error(f"No se pudieron cargar los datos: {last_error}")
+    st.stop()
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
